@@ -1,9 +1,9 @@
 ﻿'use client';
 
-import { useEffect, useRef } from 'react';
-import { createChart, type LineData, type UTCTimestamp } from 'lightweight-charts';
-import type { DailyCandle, TimeSeriesAnalysis } from '@/types/analysis';
-import { formatDateLabel, formatPrice, formatVolume } from '@/lib/formatters';
+import React, { useEffect, useRef, useState } from "react";
+import { createChart, type LineData, type UTCTimestamp } from "lightweight-charts";
+import type { DailyCandle, TimeSeriesAnalysis } from "@/types/analysis";
+import { formatDateLabel, formatPrice, formatVolume } from "@/lib/formatters";
 
 interface HistoryChartScreenProps {
   stockName: string;
@@ -14,6 +14,15 @@ interface HistoryChartScreenProps {
   playbackIndex: number | null;
   isPlaying: boolean;
   onTap?: () => void;
+  isQuestionReady: boolean;
+  onPrimaryAction: () => void;
+  onAskQuestion: (text: string) => void;
+  onExitRequest: () => Promise<void> | void;
+  questionPrompts: readonly string[];
+}
+
+function stopTapPropagation(event: React.PointerEvent) {
+  event.stopPropagation();
 }
 
 export default function HistoryChartScreen({
@@ -24,30 +33,36 @@ export default function HistoryChartScreen({
   analysis,
   playbackIndex,
   isPlaying,
-  onTap
+  onTap,
+  isQuestionReady,
+  onPrimaryAction,
+  onAskQuestion,
+  onExitRequest,
+  questionPrompts
 }: HistoryChartScreenProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
   const lineRef = useRef<any>(null);
+  const [questionText, setQuestionText] = useState("");
 
   useEffect(() => {
-    if (!containerRef.current || typeof window === 'undefined') return;
+    if (!containerRef.current || typeof window === "undefined") return;
 
     const chart = createChart(containerRef.current, {
       height: 320,
-      rightPriceScale: { borderColor: '#334155', scaleMargins: { top: 0.1, bottom: 0.2 } },
+      rightPriceScale: { borderColor: "#334155", scaleMargins: { top: 0.1, bottom: 0.2 } },
       layout: {
-        background: { color: '#0b1326' },
-        textColor: '#e8eefc'
+        background: { color: "#0b1326" },
+        textColor: "#e8eefc"
       },
       grid: {
-        horzLines: { color: '#1e293b' },
-        vertLines: { color: '#1e293b' }
+        horzLines: { color: "#1e293b" },
+        vertLines: { color: "#1e293b" }
       }
     });
 
     const series = chart.addLineSeries({
-      color: '#60a5fa',
+      color: "#60a5fa",
       lineWidth: 2,
       crosshairMarkerVisible: false,
       lastValueVisible: true,
@@ -62,10 +77,10 @@ export default function HistoryChartScreen({
       chart.applyOptions({ width: containerRef.current.clientWidth });
     };
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener("resize", handleResize);
       if (chartRef.current) {
         chartRef.current.remove();
         chartRef.current = null;
@@ -92,14 +107,15 @@ export default function HistoryChartScreen({
 
   useEffect(() => {
     if (!lineRef.current) return;
+
     const marker =
       playbackIndex !== null && playbackIndex >= 0 && playbackIndex < candles.length
         ? {
             time: candles[playbackIndex].time as unknown as UTCTimestamp,
-            position: 'inBar' as const,
-            shape: isPlaying ? 'circle' : 'arrowUp',
-            color: isPlaying ? '#f59e0b' : '#34d399',
-            text: isPlaying ? '재생 중' : '현재'
+            position: "inBar" as const,
+            shape: isPlaying ? "circle" : "arrowUp",
+            color: isPlaying ? "#f59e0b" : "#34d399",
+            text: isPlaying ? "재생 중" : "표시"
           }
         : null;
 
@@ -113,16 +129,17 @@ export default function HistoryChartScreen({
   return (
     <main
       className="screen-root"
-      aria-label="과거 차트 화면"
+      aria-label="과거 차트"
       role="button"
       tabIndex={0}
       onPointerDown={onTap}
     >
       <header className="card">
-        <div className="text-xs status-pill inline-block">과거 차트</div>
-        <h1 className="text-2xl font-bold mt-2">{stockName} 데모 차트</h1>
-        <p className="text-sm mt-2">기간: {formatDateLabel(from)} ~ {formatDateLabel(to)}</p>
-        <p className="text-xs mt-1">데모용 합성 데이터 · 실제 과거가 아닙니다.</p>
+        <div className="text-xs status-pill inline-block">과거 분석 모드</div>
+        <h1 className="text-2xl font-bold mt-2">{stockName} 과거 차트</h1>
+        <p className="text-sm mt-2">
+          조회 기간: {formatDateLabel(from)} ~ {formatDateLabel(to)}
+        </p>
       </header>
 
       <section className="card">
@@ -130,12 +147,12 @@ export default function HistoryChartScreen({
           ref={containerRef}
           className="chart-wrap h-[320px]"
           role="img"
-          aria-label="과거 차트"
+          aria-label="과거 가격 선 차트"
         />
       </section>
 
       <section className="card">
-        <h2 className="text-lg font-bold">핵심 수치</h2>
+        <h2 className="text-lg font-bold">분석 요약</h2>
         <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
           <div>
             <p className="text-slate-300">시작가</p>
@@ -146,11 +163,11 @@ export default function HistoryChartScreen({
             <p className="font-semibold">{formatPrice(analysis.summary.endPrice)}</p>
           </div>
           <div>
-            <p className="text-slate-300">전체변화율</p>
+            <p className="text-slate-300">전체 수익률</p>
             <p className="font-semibold">{analysis.summary.totalReturnPct.toFixed(1)}%</p>
           </div>
           <div>
-            <p className="text-slate-300">평균거래량</p>
+            <p className="text-slate-300">평균 거래량</p>
             <p className="font-semibold">{formatVolume(analysis.summary.averageVolume)}</p>
           </div>
           <div>
@@ -171,10 +188,81 @@ export default function HistoryChartScreen({
       </section>
 
       <section className="card">
-        <h2 className="text-lg font-bold">분석 및 인터랙션</h2>
-        <p className="text-sm mt-2">첫 두 번 탭: 가격 흐름 소리 재생 + 통계 설명</p>
-        <p className="text-sm mt-1">이후 두 번 탭: 데이터 기반 질문</p>
+        <h2 className="text-lg font-bold">분석 질문</h2>
+        <p className="text-sm mt-2">분석을 실행해 소리와 요약을 들은 뒤 궁금한 내용을 질문하세요.</p>
+
+        <div className="mt-2 grid gap-2">
+          <button
+            type="button"
+            className="rounded-lg bg-cyan-400 text-slate-950 font-bold py-3 min-h-[56px]"
+            onPointerDown={stopTapPropagation}
+            onClick={onPrimaryAction}
+          >
+            {isQuestionReady ? "질문하기" : "분석 실행 및 질문 준비"}
+          </button>
+
+          {isQuestionReady ? (
+            <>
+              <p className="text-sm mt-1">추천 질문</p>
+              <div className="mt-2 grid gap-2">
+                {questionPrompts.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    className="rounded-full border border-cyan-300 px-3 py-2 min-h-[48px] text-left"
+                    onPointerDown={stopTapPropagation}
+                    onClick={() => onAskQuestion(prompt)}
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+
+              <form
+                className="mt-2 flex gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const q = questionText.trim();
+                  if (!q) return;
+                  onAskQuestion(q);
+                  setQuestionText("");
+                }}
+              >
+                <input
+                  className="flex-1 rounded-lg border border-slate-500 bg-slate-900 px-3 py-2"
+                  value={questionText}
+                  onChange={(event) => setQuestionText(event.target.value)}
+                  onPointerDown={stopTapPropagation}
+                  placeholder="질문을 입력하세요"
+                  aria-label="질문 입력"
+                />
+                <button
+                  type="submit"
+                  onPointerDown={stopTapPropagation}
+                  className="rounded-lg bg-slate-800 border border-slate-500 px-3 py-2 min-h-[48px]"
+                >
+                  보내기
+                </button>
+              </form>
+            </>
+          ) : null}
+
+          <button
+            type="button"
+            className="rounded-lg border border-rose-300 text-rose-100 font-bold py-3 min-h-[56px]"
+            onPointerDown={stopTapPropagation}
+            onClick={() => void onExitRequest()}
+          >
+            과거 차트 종료
+          </button>
+        </div>
       </section>
+
+      <p className="px-1 text-sm">
+        두 번 탭: 분석 실행 또는 음성 질문
+        <br />
+        세 번 탭: 현재 화면 종료
+      </p>
     </main>
   );
 }

@@ -1,7 +1,7 @@
-import type { Stock } from '@/types/stock';
+import type { Stock } from "@/types/stock";
 
 export interface ParsedCommand {
-  mode: 'LIVE' | 'HISTORY';
+  mode: "LIVE" | "HISTORY";
   stock?: Stock;
   interval?: 1 | 3 | 5;
   from?: string;
@@ -10,38 +10,58 @@ export interface ParsedCommand {
   raw: string;
 }
 
-const INTERVAL_PATTERNS: Array<{ regex: RegExp; value: 1 | 3 | 5 }> = [
-  { regex: /(?:1|일)\s*분봉/g, value: 1 },
-  { regex: /(?:3|삼)\s*분봉/g, value: 3 },
-  { regex: /(?:5|오)\s*분봉/g, value: 5 }
+interface IntervalItem {
+  regex: RegExp;
+  value: 1 | 3 | 5;
+}
+
+const INTERVAL_PATTERNS: IntervalItem[] = [
+  {
+    regex: /(?:1\s*(?:분봉|분|minute|m\b)|일\s*분)/,
+    value: 1
+  },
+  {
+    regex: /(?:3\s*(?:분봉|분|minute|m\b)|삼\s*분)/,
+    value: 3
+  },
+  {
+    regex: /(?:5\s*(?:분봉|분|minute|m\b)|오\s*분)/,
+    value: 5
+  }
 ];
 
-const MONTH_RANGE_REGEX = /(\d{4})\s*년\s*(\d{1,2})\s*월\s*부터\s*(\d{4})\s*년\s*(\d{1,2})\s*월\s*까지/;
-const MONTH_ONLY_REGEX = /\b(\d{4})\s*년\s*(\d{1,2})\s*월\b/;
+const MONTH_RANGE_REGEX = /(\d{4})\s*(?:년\s*|[./-]\s*|\s+)(\d{1,2})\s*월?\s*(?:부터|에서|~|-|–|to)\s*(\d{4})\s*(?:년\s*|[./-]\s*|\s+)(\d{1,2})\s*월?/;
+const MONTH_ONLY_REGEX = /(\d{4})\s*(?:년\s*|[./-]\s*|\s+)(\d{1,2})\s*월?/;
 
-function matchStock(text: string, stocks: readonly Stock[]): Stock | undefined {
-  return stocks.find((stock) => {
-    const matchedAlias = stock.aliases.some((alias) => text.includes(alias.toLowerCase()));
-    const matchedTicker = text.includes(stock.ticker.toLowerCase());
-    return matchedAlias || matchedTicker;
-  });
+function normalizeText(value: string): string {
+  return value.toLowerCase();
+}
+
+function normalizeForCompare(value: string): string {
+  return normalizeText(value).replace(/\s+/g, "");
 }
 
 function monthToDate(year: number, month: number, isFrom: boolean): string {
-  const start = new Date(year, month - 1, isFrom ? 1 : 0);
+  const targetMonth = Math.max(1, Math.min(12, month));
   if (isFrom) {
-    return start.toISOString().slice(0, 10);
+    return new Date(year, targetMonth - 1, 1).toISOString().slice(0, 10);
   }
-  const end = new Date(year, month, 0);
-  return end.toISOString().slice(0, 10);
+  return new Date(year, targetMonth, 0).toISOString().slice(0, 10);
 }
 
-function normalizeKoreanMonth(month: number): number {
-  return Math.max(1, Math.min(12, month));
+function matchStock(input: string, stocks: readonly Stock[]): Stock | undefined {
+  const normalized = normalizeForCompare(input);
+
+  return stocks.find((stock) => {
+    const aliasMatch = stock.aliases.some((alias) => normalized.includes(normalizeForCompare(alias)));
+    const nameMatch = normalized.includes(normalizeForCompare(stock.name));
+    const tickerMatch = normalized.includes(stock.ticker);
+    return aliasMatch || nameMatch || tickerMatch;
+  });
 }
 
 export function parseDemoCommand(rawInput: string, stocks: readonly Stock[]): ParsedCommand {
-  const input = rawInput.toLowerCase();
+  const input = normalizeText(rawInput);
   const stock = matchStock(input, stocks);
 
   let interval: 1 | 3 | 5 | undefined;
@@ -55,34 +75,32 @@ export function parseDemoCommand(rawInput: string, stocks: readonly Stock[]): Pa
   let from: string | undefined;
   let to: string | undefined;
 
-  const range = input.match(MONTH_RANGE_REGEX);
-  if (range) {
-    const [, y1, m1, y2, m2] = range;
-    from = monthToDate(Number(y1), normalizeKoreanMonth(Number(m1)), true);
-    to = monthToDate(Number(y2), normalizeKoreanMonth(Number(m2)), false);
+  const rangeMatch = input.match(MONTH_RANGE_REGEX);
+  if (rangeMatch) {
+    const [, y1, m1, y2, m2] = rangeMatch;
+    from = monthToDate(Number(y1), Number(m1), true);
+    to = monthToDate(Number(y2), Number(m2), false);
   } else {
-    const single = input.match(MONTH_ONLY_REGEX);
-    if (single) {
-      const [, y, m] = single;
-      const year = Number(y);
-      const month = normalizeKoreanMonth(Number(m));
-      from = monthToDate(year, month, true);
-      to = monthToDate(year, month, false);
+    const onlyMonth = input.match(MONTH_ONLY_REGEX);
+    if (onlyMonth) {
+      const [, y, m] = onlyMonth;
+      from = monthToDate(Number(y), Number(m), true);
+      to = monthToDate(Number(y), Number(m), false);
     }
   }
 
-  const hasHistoryKeyword = /(과거|히스토리|과거의|범위|월부터|월까지)/.test(input);
-  const hasLiveKeyword = /(실시간|라이브|현재)/.test(input);
-  const looksLikeHistoryDate = !!(from && to && /월/.test(input));
-  const isHistory = (hasHistoryKeyword || looksLikeHistoryDate) && !hasLiveKeyword;
+  const hasHistoryKeyword = /(?:과거|역사|히스토리|history|past|demo)/.test(input);
+  const hasLiveKeyword = /(?:실시간|라이브|현재|live|realtime)/.test(input);
+  const hasDate = Boolean(from && to);
+  const isHistory = (hasHistoryKeyword || hasDate) && !hasLiveKeyword;
 
   const missing: string[] = [];
-  if (!stock) missing.push('stock');
-  if (!interval && !isHistory) missing.push('interval');
-  if (isHistory && !(from && to)) missing.push('date');
+  if (!stock) missing.push("stock");
+  if (!interval && !isHistory) missing.push("interval");
+  if (isHistory && !(from && to)) missing.push("date");
 
   return {
-    mode: isHistory ? 'HISTORY' : 'LIVE',
+    mode: isHistory ? "HISTORY" : "LIVE",
     stock,
     interval,
     from,
@@ -93,14 +111,17 @@ export function parseDemoCommand(rawInput: string, stocks: readonly Stock[]): Pa
 }
 
 export function resolveMissingPrompt(parsed: ParsedCommand): string {
-  if (parsed.missing.includes('stock')) {
-    return '삼성전자, SK하이닉스, 현대차, 네이버, 카카오 중 어떤 회사의 차트를 볼까요?';
+  if (parsed.missing.includes("stock")) {
+    return "종목을 선택해 주세요. 삼성전자, SK하이닉스, 현대자동차, 네이버, 카카오 중에서 고를 수 있습니다.";
   }
-  if (parsed.mode === 'HISTORY' && parsed.missing.includes('date')) {
-    return '2025년 6월부터 2025년 12월까지와 같이 기간을 말씀해 주세요.';
+
+  if (parsed.mode === "HISTORY" && parsed.missing.includes("date")) {
+    return "조회 기간을 말씀해 주세요. 예를 들면 2025년 6월부터 2025년 12월까지입니다.";
   }
-  if (parsed.missing.includes('interval')) {
-    return '1분봉, 3분봉, 5분봉 중 어떤 봉을 말해 주세요.';
+
+  if (parsed.missing.includes("interval")) {
+    return "차트 주기를 1분, 3분, 5분 중에서 선택해 주세요.";
   }
-  return '명령을 조금 더 구체적으로 말씀해 주세요.';
+
+  return "명령에 필요한 정보가 부족합니다.";
 }

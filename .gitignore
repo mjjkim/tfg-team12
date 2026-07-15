@@ -2,3 +2,9 @@
 node_modules/
 .DS_Store
 *.log
+
+# Local environment secrets
+.env*
+!.env.example
+
+.vercel
