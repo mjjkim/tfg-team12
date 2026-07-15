@@ -1,64 +1,84 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
-  --bg: #f3f6fb;
-  --fg: #0f172a;
-  --card-bg: #ffffff;
-  --accent: #2563eb;
+  --surface: #0f172a;
+  --surface-soft: #111c35;
+  --text-main: #e8eefc;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100dvh;
+}
+
+body {
+  background: #040812;
+  color: var(--text-main);
+  font-family: Pretendard, 'Noto Sans KR', Arial, sans-serif;
 }
 
 * {
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
-  background: radial-gradient(circle at top, #eaf0ff 0%, var(--bg) 48%);
-  color: var(--fg);
-  font-family: Inter, Pretendard, Arial, sans-serif;
+button,
+input {
+  min-height: 48px;
 }
 
 .app-shell {
-  max-width: 960px;
+  width: min(100%, 430px);
   margin: 0 auto;
-  padding: 2rem 1rem 3rem;
-}
-
-.header {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-  color: #0f172a;
-}
-
-.main {
-  min-height: calc(100vh - 140px);
-}
-
-.footer {
-  margin-top: 2rem;
-  color: #475569;
-  font-size: 0.9rem;
-}
-
-.card-area h1 {
-  margin: 0 0 0.5rem;
-}
-
-.grid {
-  margin-top: 1.5rem;
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  min-height: 100dvh;
+  padding: 0.85rem 0.9rem 4.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
 }
 
 .card {
-  background: var(--card-bg);
-  border: 1px solid #dbe3f0;
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.08);
+  border-radius: 14px;
+  border: 1px solid #243248;
+  background: linear-gradient(180deg, #0f1b34, #101a33);
+  padding: 0.8rem;
 }
 
-.card h2 {
-  margin: 0 0 0.5rem;
-  color: var(--accent);
+.chart-wrap {
+  background: linear-gradient(180deg, #0d182f, #0b1324);
+  border-radius: 14px;
+  border: 1px solid #243248;
+  min-height: 320px;
+  padding: 0.4rem;
+}
+
+.status-pill {
+  border-radius: 999px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+.screen-root {
+  min-height: 1px;
+  touch-action: manipulation;
+}
+
+@media (min-width: 431px) {
+  body {
+    justify-content: center;
+  }
 }
