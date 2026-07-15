@@ -20,10 +20,10 @@ export default function VoiceStatus({ isListening, isSpeaking, micEnabled, statu
           마이크: {micEnabled ? '사용 가능' : '지원 안 됨'}
         </span>
         <span className="status-pill" aria-live="polite">
-          TTS: {isSpeaking ? '재생 중' : '대기'}
+          음성 출력: {isSpeaking ? '재생 중' : '대기'}
         </span>
         <span className="status-pill" aria-live="polite">
-          STT: {isListening ? '듣는 중' : '대기'}
+          음성 입력: {isListening ? '듣는 중' : '대기'}
         </span>
       </div>
       {errorText ? (
