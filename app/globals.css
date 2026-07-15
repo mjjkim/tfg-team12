@@ -1,0 +1,64 @@
+:root {
+  --bg: #f3f6fb;
+  --fg: #0f172a;
+  --card-bg: #ffffff;
+  --accent: #2563eb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #eaf0ff 0%, var(--bg) 48%);
+  color: var(--fg);
+  font-family: Inter, Pretendard, Arial, sans-serif;
+}
+
+.app-shell {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+
+.header {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: #0f172a;
+}
+
+.main {
+  min-height: calc(100vh - 140px);
+}
+
+.footer {
+  margin-top: 2rem;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.card-area h1 {
+  margin: 0 0 0.5rem;
+}
+
+.grid {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid #dbe3f0;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.08);
+}
+
+.card h2 {
+  margin: 0 0 0.5rem;
+  color: var(--accent);
+}
