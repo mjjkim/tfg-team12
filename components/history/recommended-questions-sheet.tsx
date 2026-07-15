@@ -108,7 +108,7 @@ export function RecommendedQuestionsSheet({
         onPointerDown={(event) => event.stopPropagation()}
         onClick={onExit}
       >
-        실시간 차트 종료
+        과거 차트 종료
       </button>
     </section>
   );

@@ -16,7 +16,6 @@ interface HistoryChartScreenProps {
   playbackIndex: number | null;
   isPlaying: boolean;
   onTap?: () => void;
-  isQuestionReady: boolean;
   onPrimaryAction: () => void;
   onAskQuestion: (text: string) => void;
   onExitRequest: () => Promise<void> | void;
@@ -30,7 +29,6 @@ export default function HistoryChartScreen({
   candles,
   analysis,
   onTap,
-  isQuestionReady,
   onPrimaryAction,
   onAskQuestion,
   onExitRequest,
@@ -57,8 +55,6 @@ export default function HistoryChartScreen({
       <HistorySummaryCard analysis={analysis} />
 
       <HistoryFooterActions
-        isQuestionReady={isQuestionReady}
-        onPrimaryAction={onPrimaryAction}
         onAskQuestion={onAskQuestion}
         onExitRequest={onExitRequest}
         questionPrompts={questionPrompts}
