@@ -1,42 +1,76 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type RecognitionCtor = new () => any;
 
 export function useSpeech() {
   const [isListening, setListening] = useState(false);
   const [isSpeaking, setSpeaking] = useState(false);
+  const [isSupported, setIsSupported] = useState(false);
+  const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  const isSupported =
-    typeof window !== 'undefined' &&
-    (typeof (window as any).SpeechRecognition !== 'undefined' ||
-      typeof (window as any).webkitSpeechRecognition !== 'undefined');
+  useEffect(() => {
+    const supported =
+      typeof window !== 'undefined' &&
+      (typeof (window as any).SpeechRecognition !== 'undefined' ||
+        typeof (window as any).webkitSpeechRecognition !== 'undefined');
 
-  const speak = useCallback((text: string) => {
+    setIsSupported(!!supported);
+  }, []);
+
+  const speak = useCallback((text: string, options?: { rate?: number; pitch?: number }) => {
     return new Promise<void>((resolve, reject) => {
       if (typeof window === 'undefined' || !window.speechSynthesis) {
         resolve();
         return;
       }
 
-      window.speechSynthesis.cancel();
+      let settled = false;
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+
+      const rejectOnce = (error: unknown) => {
+        if (settled) return;
+        settled = true;
+        reject(error instanceof Error ? error : new Error(String(error)));
+      };
+
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        // ignore
+      }
 
       const utterance = new SpeechSynthesisUtterance(text);
+      activeUtteranceRef.current = utterance;
       utterance.lang = 'ko-KR';
-      utterance.rate = 0.92;
+      utterance.pitch = options?.pitch ?? 1.0;
+      utterance.rate = options?.rate ?? 1.15;
 
       utterance.onstart = () => setSpeaking(true);
       utterance.onend = () => {
         setSpeaking(false);
-        resolve();
+        settle();
       };
       utterance.onerror = (event) => {
         setSpeaking(false);
-        const error = (event as SpeechSynthesisErrorEvent).error || 'tts-error';
-        if (error === 'canceled') {
-          resolve();
+        const rawError = (event as SpeechSynthesisErrorEvent).error;
+        const error = rawError ? String(rawError).toLowerCase() : 'tts-error';
+
+        if (error === 'canceled' || error === 'interrupted' || error === 'interruption' || error === 'audio-cancelled') {
+          settle();
           return;
         }
-        reject(new Error(error));
+
+        // In practice, most transient failures should not break UI interaction.
+        if (error.includes('interrup') || error.includes('cancel')) {
+          settle();
+          return;
+        }
+
+        rejectOnce(new Error(error));
       };
 
       window.speechSynthesis.speak(utterance);
@@ -113,6 +147,7 @@ export function useSpeech() {
   const stopSpeaking = useCallback(() => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
+      activeUtteranceRef.current = null;
       setSpeaking(false);
     }
   }, []);
@@ -125,3 +160,4 @@ export function useSpeech() {
 
   return { speak, listen, stopSpeaking, isListening, isSpeaking, isSupported };
 }
+
