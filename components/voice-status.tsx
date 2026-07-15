@@ -9,7 +9,7 @@
 export default function VoiceStatus({ isListening, isSpeaking, micEnabled, statusText, errorText }: VoiceStatusProps) {
   return (
     <section
-      className="card"
+      className="sr-only"
       aria-live="polite"
       aria-atomic="true"
     >

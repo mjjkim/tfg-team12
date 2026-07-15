@@ -106,7 +106,7 @@ export function analyzeTimeSeries(stock: Stock, candles: DailyCandle[]): TimeSer
 
 export function describeAnalysis(analysis: TimeSeriesAnalysis): string {
   const lines: string[] = [];
-  const header = `${analysis.stock.name}의 ${analysis.period.from}부터 ${analysis.period.to}까지 데모 데이터 분석입니다.`;
+  const header = `${analysis.stock.name}의 ${analysis.period.from}부터 ${analysis.period.to}까지 분석입니다.`;
   lines.push(header);
 
   if (analysis.segments.length === 0) {
@@ -125,6 +125,5 @@ export function describeAnalysis(analysis: TimeSeriesAnalysis): string {
 
   lines.push(`전체 기간의 가격 변화율은 ${analysis.summary.totalReturnPct.toFixed(1)}퍼센트입니다.`);
   lines.push(`기간 중 최고가는 ${analysis.summary.highestPrice.toLocaleString('ko-KR')}원, 최저가는 ${analysis.summary.lowestPrice.toLocaleString('ko-KR')}원입니다.`);
-  lines.push('이 설명은 데모용 합성 데이터의 통계적 요약이며 미래 가격을 예측하지 않습니다.');
   return lines.join(' ');
 }

@@ -39,7 +39,6 @@ export function buildTrendOutro(analysis: TimeSeriesAnalysis): string {
     `끝 ${formatDateLabel(analysis.period.to)}, ${formatPrice(analysis.summary.endPrice)}. ` +
     `전체 ${signedChange(analysis.summary.totalReturnPct)}했습니다. ` +
     `기간 중 최고가 ${formatPrice(analysis.summary.highestPrice)}, ` +
-    `최저가 ${formatPrice(analysis.summary.lowestPrice)}. ` +
-    `이 설명은 데모용 합성 데이터의 통계 요약이며 미래 가격을 예측하지 않습니다.`
+    `최저가 ${formatPrice(analysis.summary.lowestPrice)}.`
   );
 }

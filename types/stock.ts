@@ -6,7 +6,7 @@
   tickSize: number;
 }
 
-export type AppMode = 'HOME' | 'LIVE_SETUP' | 'LIVE_CHART' | 'HISTORY_CHART' | 'EXIT_CONFIRM';
+export type AppMode = 'HOME' | 'LIVE_SETUP' | 'LIVE_CHART' | 'HISTORY_SETUP' | 'HISTORY_CHART' | 'EXIT_CONFIRM';
 
 export type MarketRegime = 'UPTREND' | 'DOWNTREND' | 'SIDEWAYS';
 

@@ -18,6 +18,12 @@ export function formatDateLabel(value: string): string {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
+export function formatShortDateLabel(value: string): string {
+  const d = new Date(`${value}T00:00:00`);
+  const shortYear = String(d.getFullYear()).slice(-2);
+  return `${shortYear}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+}
+
 export function downsampleSeries<T>(items: T[], maxPoints: number): T[] {
   if (items.length <= maxPoints) return items;
   const interval = Math.max(1, Math.floor(items.length / maxPoints));

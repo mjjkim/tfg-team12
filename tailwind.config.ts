@@ -13,7 +13,8 @@ const config: Config = {
         brand: '#38bdf8'
       },
       fontFamily: {
-        sans: ['Pretendard', 'Noto Sans KR', 'system-ui', 'sans-serif']
+        sans: ['var(--font-inter)', 'Pretendard', 'Noto Sans KR', 'system-ui', 'sans-serif'],
+        pixelify: ['var(--font-pixelify)', 'monospace']
       }
     }
   },

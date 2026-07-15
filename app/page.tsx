@@ -10,8 +10,10 @@ import { useSpeech } from "@/hooks/use-speech";
 import { useLiveDemo } from "@/hooks/use-live-demo";
 import { useHeartbeat } from "@/hooks/use-heartbeat";
 import HomeScreen from "@/components/home-screen";
-import LiveChartScreen from "@/components/live-chart-screen";
+import { LiveChartScreen } from "@/components/live-chart-screen";
 import HistoryChartScreen from "@/components/history-chart-screen";
+import { LiveSetupScreen } from "@/components/live-setup-screen";
+import { HistorySetupScreen } from "@/components/history-setup/history-setup-screen";
 import VoiceStatus from "@/components/voice-status";
 import FallbackControls from "@/components/fallback-controls";
 import { STOCKS } from "@/lib/stocks";
@@ -64,6 +66,7 @@ function statusFromMode(mode: AppMode, isListening: boolean, isSpeaking: boolean
   if (isListening) return "음성을 듣고 있어요";
   if (isSpeaking) return "안내 음성을 재생하고 있어요";
   if (mode === "LIVE_CHART" || mode === "LIVE_SETUP") return "실시간 차트 실행 중";
+  if (mode === "HISTORY_SETUP") return "과거 조회 기간 선택 중";
   if (mode === "HISTORY_CHART") return "과거 차트 분석 중";
   return "대기 중";
 }
@@ -251,6 +254,20 @@ export default function Page() {
     [executeHistoryStart, speak]
   );
 
+  const openHistorySetup = useCallback((ticker: string, fromMonth: string, toMonth: string) => {
+    const stock = STOCKS.find((item) => item.ticker === ticker || item.name === ticker);
+    if (!stock) {
+      setErrorText("선택한 종목을 찾을 수 없습니다.");
+      return;
+    }
+
+    setErrorText(undefined);
+    setSelectedStock(stock);
+    setHistoryFrom(monthRangeFromSimple(fromMonth, false));
+    setHistoryTo(monthRangeFromSimple(toMonth, true));
+    setAppMode("HISTORY_SETUP");
+  }, []);
+
   const decideHomeAnswer = useCallback(async (raw: string): Promise<VoiceAgentDecision> => {
     const text = raw.trim();
     if (!text) throw new Error("음성 답변을 인식하지 못했습니다.");
@@ -401,7 +418,7 @@ export default function Page() {
     const msg = `${liveDemo.currentPrice}`;
     setLastResponse(msg);
     await speak(msg, { rate: 1.45 });
-  }, [liveDemo.currentPrice, liveDemo.isRunning, speak]);
+  }, [liveDemo.currentPrice, liveDemo.isRunning, selectedStock, speak]);
 
   const answerHistoryQuestionWithText = useCallback(
     async (text: string) => {
@@ -571,14 +588,58 @@ export default function Page() {
             : null;
 
   return (
-    <div className="min-h-screen">
-      <VoiceStatus
-        isListening={isListening}
-        isSpeaking={isSpeaking}
-        micEnabled={speechSupported}
-        statusText={statusFromMode(appMode, isListening, isSpeaking)}
-        errorText={errorText}
-      />
+    <div
+      className={
+        appMode === "HOME" ||
+        appMode === "LIVE_SETUP" ||
+        appMode === "LIVE_CHART" ||
+        appMode === "HISTORY_SETUP" ||
+        appMode === "HISTORY_CHART"
+          ? "min-h-screen"
+          : "app-shell"
+      }
+    >
+      {appMode !== "HOME" && appMode !== "LIVE_SETUP" && appMode !== "HISTORY_SETUP" ? (
+        <div className={appMode === "HISTORY_CHART" ? "sr-only" : undefined}>
+          <VoiceStatus
+            isListening={isListening}
+            isSpeaking={isSpeaking}
+            micEnabled={speechSupported}
+            statusText={statusFromMode(appMode, isListening, isSpeaking)}
+            errorText={errorText}
+          />
+        </div>
+      ) : null}
+
+      {appMode === "LIVE_SETUP" ? (
+        <LiveSetupScreen
+          stocks={STOCKS}
+          isBusy={isBusy}
+          isListening={isListening}
+          isSpeaking={isSpeaking}
+          onBack={() => {
+            setManualMode(null);
+            setAppMode("HOME");
+          }}
+          onVoiceRecognition={() => void runHomeVoice()}
+          onStart={(ticker, interval) => void startLiveBySelection(ticker, interval)}
+        />
+      ) : null}
+
+      {appMode === "HISTORY_SETUP" && selectedStock ? (
+        <HistorySetupScreen
+          initialFromMonth={historyFrom.slice(0, 7)}
+          initialToMonth={historyTo.slice(0, 7)}
+          isBusy={isBusy}
+          isListening={isListening}
+          isSpeaking={isSpeaking}
+          onBack={resetToHome}
+          onVoiceRequest={() => void runHomeVoice()}
+          onStart={(fromMonth, toMonth) => {
+            void startHistoryBySelection(selectedStock.ticker, fromMonth, toMonth);
+          }}
+        />
+      ) : null}
 
       {appMode === "HOME" && (
         <HomeScreen
@@ -587,8 +648,11 @@ export default function Page() {
           lastResponse={lastResponse}
           onStartVoiceCommand={runHomeVoice}
           onSubmitText={(text) => void runHomeText(text)}
-          onLaunchLive={startLiveBySelection}
-          onLaunchHistory={startHistoryBySelection}
+          onLaunchLive={() => {
+            setManualMode(null);
+            setAppMode("LIVE_SETUP");
+          }}
+          onLaunchHistory={openHistorySetup}
           onTap={homeHandler.onTap}
         />
       )}
@@ -631,7 +695,7 @@ export default function Page() {
       )}
 
       {appMode === "HISTORY_CHART" && historyQuestionLog.length > 0 ? (
-        <section className="card mt-2">
+        <section className="sr-only" aria-live="polite">
           <h2 className="text-lg font-bold">질문 내역</h2>
           <ul className="mt-2 text-sm space-y-1" role="list">
             {historyQuestionLog.map((item) => (

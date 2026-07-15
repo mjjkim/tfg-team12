@@ -6,6 +6,11 @@
   --surface: #0f172a;
   --surface-soft: #111c35;
   --text-main: #e8eefc;
+  --landing-background: #010618;
+  --landing-surface: #06142b;
+  --landing-border: #20324a;
+  --landing-primary: #00ecfc;
+  --landing-accent: #fd5d79;
 }
 
 html,
@@ -15,9 +20,9 @@ body {
 }
 
 body {
-  background: #040812;
+  background: #010618;
   color: var(--text-main);
-  font-family: Pretendard, 'Noto Sans KR', Arial, sans-serif;
+  font-family: var(--font-inter), Pretendard, 'Noto Sans KR', Arial, sans-serif;
 }
 
 * {
@@ -66,15 +71,70 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: not-allowed;
+}
+
 button:focus-visible,
 input:focus-visible {
   outline: 3px solid #38bdf8;
   outline-offset: 2px;
 }
 
+.landing-screen {
+  min-height: max(100dvh, 874px);
+  font-family: var(--font-inter), Pretendard, 'Noto Sans KR', Arial, sans-serif;
+}
+
+.font-pixelify {
+  font-family: var(--font-pixelify), monospace;
+}
+
+.landing-quick-command {
+  min-height: 17px;
+}
+
+.landing-screen button:focus-visible {
+  outline-color: var(--landing-primary);
+}
+
+.history-screen,
+.history-question-sheet {
+  font-family: var(--font-inter), Inter, Pretendard, 'Noto Sans KR', Arial, sans-serif;
+}
+
+.history-question-sheet {
+  scrollbar-width: none;
+}
+
+.history-question-sheet::-webkit-scrollbar {
+  display: none;
+}
+
+.history-screen button:focus-visible,
+.history-screen input:focus-visible {
+  outline-color: var(--landing-primary);
+}
+
 .screen-root {
   min-height: 1px;
   touch-action: manipulation;
+}
+
+.live-progress-pulse {
+  animation: live-progress-pulse 600ms ease-out;
+}
+
+@keyframes live-progress-pulse {
+  50% {
+    box-shadow: 0 0 12px rgba(0, 236, 252, 0.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-progress-pulse {
+    animation: none;
+  }
 }
 
 @media (min-width: 431px) {
