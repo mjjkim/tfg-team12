@@ -16,7 +16,8 @@ import FallbackControls from "@/components/fallback-controls";
 import { STOCKS } from "@/lib/stocks";
 import { parseDemoCommand, resolveMissingPrompt } from "@/lib/command-parser";
 import { getDailyCandlesRange } from "@/lib/demo-data-generator";
-import { analyzeTimeSeries, describeAnalysis } from "@/lib/time-series-analysis";
+import { analyzeTimeSeries } from "@/lib/time-series-analysis";
+import { buildTrendIntro, buildTrendOutro } from "@/lib/trend-narration";
 import { answerHistoryQuestion } from "@/lib/history-question-answerer";
 import { downsampleSeries, formatPrice, formatVolume } from "@/lib/formatters";
 
@@ -300,6 +301,12 @@ export default function Page() {
         const minPrice = Math.min(...sampled.map((row) => row.close));
         const maxPrice = Math.max(...sampled.map((row) => row.close));
 
+        // 말 → 소리 → 말: ① 결론+시작값 음성
+        const intro = buildTrendIntro(analysis);
+        setLastResponse(intro);
+        await speak(intro);
+
+        // ② 형태 스윕(소리)
         await sonification.play(closes, minPrice, maxPrice, (index) => {
           const mapped = index >= 0 ? indexMap[index] : null;
           setHistoryPlaybackIndex(mapped === -1 ? null : mapped);
@@ -307,8 +314,9 @@ export default function Page() {
 
         setHistoryReadyForQuestion(true);
         setHistoryPlaybackIndex(null);
-        const summary = describeAnalysis(analysis);
-        await speak(summary);
+
+        // ③ 끝값 못박기 + 요약 음성 (speech-based mark)
+        await speak(buildTrendOutro(analysis));
         setLastResponse("You can ask questions by double-tap.");
         return;
       }
