@@ -18,6 +18,14 @@ export function formatDateLabel(value: string): string {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
+export function formatDateForSpeech(value: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  return formatDateLabel(value);
+}
+
 export function downsampleSeries<T>(items: T[], maxPoints: number): T[] {
   if (items.length <= maxPoints) return items;
   const interval = Math.max(1, Math.floor(items.length / maxPoints));

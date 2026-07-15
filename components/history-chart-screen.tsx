@@ -140,7 +140,6 @@ export default function HistoryChartScreen({
         <p className="text-sm mt-2">
           조회 기간: {formatDateLabel(from)} ~ {formatDateLabel(to)}
         </p>
-        <p className="text-xs mt-1">과거 차트는 데모용 합성 데이터로 생성됩니다.</p>
       </header>
 
       <section className="card">

@@ -136,9 +136,9 @@ export default function LiveChartScreen({
       onPointerDown={onTap}
     >
       <header className="card">
-        <div className="text-xs status-pill inline-block">실시간 데모 실행 중</div>
+        <div className="text-xs status-pill inline-block">실시간 차트 실행 중</div>
         <h1 className="text-2xl font-bold mt-2">{stockName} ({interval}분봉)</h1>
-        <p className="text-sm">데모 모드에서는 {interval}분봉이 12·24·36초 주기로 빠르게 갱신됩니다.</p>
+        <p className="text-sm">{interval}분봉이 빠르게 갱신되고 있습니다.</p>
       </header>
 
       <section className="card">

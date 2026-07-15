@@ -1,6 +1,7 @@
 ﻿import type { Stock } from '@/types/stock';
 import type { DailyCandle, TimeSeriesAnalysis, TimeSeriesSegment } from '@/types/analysis';
 import { TREND_CONFIG } from './stocks';
+import { formatDateForSpeech } from './formatters';
 
 function movingAverage(values: number[], window: number): number[] {
   const out: number[] = [];
@@ -106,7 +107,7 @@ export function analyzeTimeSeries(stock: Stock, candles: DailyCandle[]): TimeSer
 
 export function describeAnalysis(analysis: TimeSeriesAnalysis): string {
   const lines: string[] = [];
-  const header = `${analysis.stock.name}의 ${analysis.period.from}부터 ${analysis.period.to}까지 데모 데이터 분석입니다.`;
+  const header = `${analysis.stock.name}의 ${formatDateForSpeech(analysis.period.from)}부터 ${formatDateForSpeech(analysis.period.to)}까지 분석입니다.`;
   lines.push(header);
 
   if (analysis.segments.length === 0) {
@@ -119,12 +120,13 @@ export function describeAnalysis(analysis: TimeSeriesAnalysis): string {
           : segment.type === 'FALL'
             ? `${Math.abs(segment.changePct).toFixed(1)}퍼센트 하락`
             : '횡보';
-      lines.push(`${segment.startDate}부터 ${segment.endDate} 구간은 ${verb}으로 분류되었습니다.`);
+      lines.push(
+        `${formatDateForSpeech(segment.startDate)}부터 ${formatDateForSpeech(segment.endDate)} 구간은 ${verb}으로 분류되었습니다.`
+      );
     });
   }
 
   lines.push(`전체 기간의 가격 변화율은 ${analysis.summary.totalReturnPct.toFixed(1)}퍼센트입니다.`);
   lines.push(`기간 중 최고가는 ${analysis.summary.highestPrice.toLocaleString('ko-KR')}원, 최저가는 ${analysis.summary.lowestPrice.toLocaleString('ko-KR')}원입니다.`);
-  lines.push('이 설명은 데모용 합성 데이터의 통계적 요약이며 미래 가격을 예측하지 않습니다.');
   return lines.join(' ');
 }
