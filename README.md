@@ -129,27 +129,6 @@ OHLCV 스트림
 
 ---
 
-## 데모 데이터 구성
-
-국내 주식시장이 마감된 시간에도 기능을 시연할 수 있도록 데모 스트리밍 모드를 사용합니다.
-
-- 실제 종목 형식의 KOSPI 샘플 데이터 사용
-- 과거 OHLCV 데이터를 현재 시각 기준으로 순차 재생 가능
-- 미리 생성된 OHLCV 시나리오를 일정 간격으로 스트리밍 가능
-- 상승, 하락, 횡보, 급등락 등 기능 검증용 시나리오 제공
-- 실제 주문이나 계좌 데이터와 분리
-
-```text
-과거 또는 샘플 OHLCV
-        ↓ 일정 간격 재생
-실시간 시세 처리 모듈
-        ├─ 차트 갱신
-        ├─ 소리 엔진 전달
-        └─ 분석 모듈 전달
-```
-
----
-
 ## 기술 스택
 
 | 영역 | 기술 |
@@ -163,7 +142,7 @@ OHLCV 스트림
 | API | Next.js Route Handler 또는 별도 분석 서버 |
 | Analysis | TypeScript/Python 기반 시계열 분석 모듈 |
 | LLM | 서버 측 LLM API 연동 |
-| Data | 데모 OHLCV JSON/CSV 또는 시세 API |
+| Data | 시세 API |
 
 ---
 
@@ -186,9 +165,6 @@ OHLCV 스트림
 │   ├── AnalysisResult.tsx
 │   └── AccessibilityControls.tsx
 ├── lib/
-│   ├── stocks.ts                  # 종목·OHLCV 데모 데이터
-│   ├── stream/
-│   │   └── demoStream.ts          # 실시간형 데이터 재생
 │   ├── analysis/
 │   │   ├── trend.ts               # 상승·하락·횡보 판정
 │   │   ├── segmentation.ts        # 구간 분할
@@ -234,10 +210,6 @@ cp .env.example .env.local
 `.env.local` 예시:
 
 ```env
-# 데모 스트리밍
-NEXT_PUBLIC_DEMO_MODE=true
-NEXT_PUBLIC_STREAM_INTERVAL_MS=1000
-
 # 브라우저 음성 기능 또는 외부 API 선택
 NEXT_PUBLIC_STT_PROVIDER=browser
 NEXT_PUBLIC_TTS_PROVIDER=browser
@@ -314,20 +286,6 @@ npm run start
 
 ---
 
-## 주의 사항
-
-- 본 서비스는 접근성 기술을 검증하기 위한 데모입니다.
-- 제공되는 분석은 과거 및 현재 가격 데이터를 요약한 정보이며 미래 가격을 예측하지 않습니다.
-- 매수·매도 추천, 투자 자문 또는 수익 보장을 제공하지 않습니다.
-- 데모 데이터는 실제 거래소의 현재 시세와 다를 수 있습니다.
-- 실제 금융 서비스로 확장할 경우 시세 이용 약관, 개인정보 보호, 전자금융 및 투자자 보호 관련 요구사항을 별도로 검토해야 합니다.
-
----
-
 ## License
 
-프로젝트 정책에 맞는 라이선스를 추가해 주세요.
-
-```text
-MIT License
-```
+이 프로젝트는 MIT License를 따릅니다.

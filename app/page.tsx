@@ -18,8 +18,7 @@ import VoiceStatus from "@/components/voice-status";
 import FallbackControls from "@/components/fallback-controls";
 import { STOCKS } from "@/lib/stocks";
 import { getDailyCandlesRange } from "@/lib/demo-data-generator";
-import { analyzeTimeSeries } from "@/lib/time-series-analysis";
-import { buildTrendIntro, buildTrendOutro } from "@/lib/trend-narration";
+import { analyzeTimeSeries, describeAnalysis } from "@/lib/time-series-analysis";
 import { answerHistoryQuestion } from "@/lib/history-question-answerer";
 import { downsampleSeries } from "@/lib/formatters";
 
@@ -136,7 +135,7 @@ export default function Page() {
       examples: [
         "실시간 차트 보여줘",
         "삼성전자 5분 실시간 차트",
-        "삼성전자 과거 차트 보여줘"
+        "삼성전자 2025년 6월부터 2025년 12월까지 과거 차트 보여줘"
       ]
     },
     HISTORY_QUESTION: {
@@ -180,14 +179,12 @@ export default function Page() {
     STOCKS.find((stock) => stock.ticker === ticker || stock.name === ticker);
 
   const executeHistoryStart = useCallback(
-    async (stock: Stock, from: string, to: string, forceSpeak = true, announcement?: string) => {
+    async (stock: Stock, from: string, to: string) => {
       const candles = getDailyCandlesRange(stock, from, to);
       if (candles.length === 0) {
         const msg = "선택한 기간에 표시할 데이터가 없습니다.";
         setLastResponse(msg);
-        if (forceSpeak) {
-          await speak(msg);
-        }
+        await speak(msg);
         return;
       }
 
@@ -202,13 +199,33 @@ export default function Page() {
       setHistoryPlaybackIndex(null);
       setAppMode("HISTORY_CHART");
 
-      const intro = announcement?.trim() || `${stock.name}의 과거 분석이 준비되었습니다.`;
+      const intro = `${stock.name}의 ${monthLabel(from)}부터 ${monthLabel(to)}까지 차트를 소리로 들려드리겠습니다.`;
       setLastResponse(intro);
-      if (forceSpeak) {
-        await speak(intro);
-      }
+      await speak(intro);
+
+      const sampled = downsampleSeries(candles, 48);
+      const closes = sampled.map((row) => row.close);
+      const indexMap = sampled.map((row) => candles.findIndex((candle) => candle.time === row.time));
+      const minPrice = Math.min(...closes);
+      const maxPrice = Math.max(...closes);
+
+      await sonification.play(closes, minPrice, maxPrice, (index) => {
+        const mapped = index >= 0 ? indexMap[index] : null;
+        setHistoryPlaybackIndex(mapped === -1 ? null : mapped);
+      });
+
+      setHistoryPlaybackIndex(null);
+      setHistoryReadyForQuestion(true);
+
+      const analysisIntro = "이제 차트를 설명해드리겠습니다.";
+      setLastResponse(analysisIntro);
+      await speak(analysisIntro);
+
+      const analysisNarration = describeAnalysis(result);
+      setLastResponse(analysisNarration);
+      await speak(analysisNarration);
     },
-    [speak]
+    [sonification, speak]
   );
 
   const startLiveBySelection = useCallback(
@@ -274,21 +291,6 @@ export default function Page() {
 
     setLastCommand(text);
     setErrorText(undefined);
-    const isHistoryRequest = /(?:과거|역사|히스토리|history|historical|past)/i.test(text);
-    const isLiveRequest = /(?:실시간|라이브|live|realtime)/i.test(text);
-
-    if (isHistoryRequest && !isLiveRequest) {
-      homeConversationRef.current = [];
-      return {
-        decision: "START_HISTORY",
-        speech: "과거 차트 분석을 시작합니다.",
-        stockTicker: STOCKS[0]?.ticker ?? "005930",
-        interval: 0,
-        from: historyFrom,
-        to: historyTo
-      };
-    }
-
     const userMessage: VoiceAgentMessage = { role: "user", content: text };
     const messages: VoiceAgentMessage[] = [...homeConversationRef.current, userMessage].slice(
       -(MAX_HOME_MESSAGES - 1)
@@ -299,7 +301,7 @@ export default function Page() {
     homeConversationRef.current = [...messages, assistantMessage].slice(-MAX_HOME_MESSAGES);
 
     return decision;
-  }, [historyFrom, historyTo]);
+  }, []);
 
   const applyHomeDecision = useCallback(
     async (decision: VoiceAgentDecision): Promise<boolean> => {
@@ -322,7 +324,7 @@ export default function Page() {
       if (!stock) throw new Error("인공지능이 올바른 종목을 선택하지 못했습니다.");
 
       homeConversationRef.current = [];
-      await executeHistoryStart(stock, decision.from, decision.to, true, decision.speech);
+      await executeHistoryStart(stock, decision.from, decision.to);
       return true;
     },
     [executeHistoryStart, speak, startLiveBySelection]
@@ -443,33 +445,6 @@ export default function Page() {
         return;
       }
 
-      if (!historyReadyForQuestion) {
-        const sampled = downsampleSeries(historyCandles, 48);
-        const closes = sampled.map((row) => row.close);
-        const indexMap = sampled.map((row) => historyCandles.findIndex((cand) => cand.time === row.time));
-        const minPrice = Math.min(...sampled.map((row) => row.close));
-        const maxPrice = Math.max(...sampled.map((row) => row.close));
-
-        // 말 → 소리 → 말: ① 결론+시작값 음성
-        const intro = buildTrendIntro(analysis);
-        setLastResponse(intro);
-        await speak(intro);
-
-        // ② 형태 스윕(소리)
-        await sonification.play(closes, minPrice, maxPrice, (index) => {
-          const mapped = index >= 0 ? indexMap[index] : null;
-          setHistoryPlaybackIndex(mapped === -1 ? null : mapped);
-        });
-
-        setHistoryReadyForQuestion(true);
-        setHistoryPlaybackIndex(null);
-
-        // ③ 끝값 못박기 + 요약 음성 (speech-based mark)
-        await speak(buildTrendOutro(analysis));
-        setLastResponse("You can ask questions by double-tap.");
-        return;
-      }
-
       if (!speechSupported) {
         setManualMode("HISTORY_QUESTION");
         setLastResponse("질문을 글자로 입력해 주세요.");
@@ -494,10 +469,8 @@ export default function Page() {
     answerHistoryQuestionWithText,
     analysis,
     historyCandles,
-    historyReadyForQuestion,
     listen,
     speechSupported,
-    sonification,
     speak
   ]);
 
@@ -683,7 +656,6 @@ export default function Page() {
           analysis={analysis}
           playbackIndex={historyPlaybackIndex}
           isPlaying={sonification.isPlaying}
-          isQuestionReady={historyReadyForQuestion}
           onPrimaryAction={runHistoryQuestionFlow}
           onAskQuestion={(text) => {
             void answerHistoryQuestionWithText(text);
